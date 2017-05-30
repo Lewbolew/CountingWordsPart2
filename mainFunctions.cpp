@@ -7,11 +7,18 @@
 #include <fstream>
 #include <iostream>
 #include <condition_variable>
+#include <algorithm>
 #include "mainFunctions.h"
 
 using namespace std;
 
-int producer(string filename, size_t block_size, deque<vector<string>> &dataBatches, mutex &dequeMut, condition_variable cv, atomic <bool> done) {
+void wordsRedactor(vector<string> &words) {
+    for (int k=0;k < words.size();k++) {
+        transform(words[k].begin(), words[k].end(), words[k].begin(), ::tolower);
+        words[k].erase (remove_if (words[k].begin (), words[k].end (), ::ispunct), words[k].end ());
+    }
+}
+int producer(string filename, size_t block_size, deque<vector<string>> &dataBatches, mutex &dequeMut, condition_variable &cv, atomic <bool> &done) {
     fstream file(filename); //full path to the file
     if (!file.is_open()) {
         cout << "error reading from file";
@@ -47,6 +54,27 @@ int producer(string filename, size_t block_size, deque<vector<string>> &dataBatc
     return 1;
 }
 
-int consumer(map<string, int> &countedWords) {
-    
+int consumer(map<string, int> &countedWords, deque<vector<string>> &dataBatches, mutex &dequeMut,mutex &mapMut, condition_variable &cv, atomic <bool> &done) {
+    bool checker = true;
+    while(checker) {
+        unique_lock<mutex> lg(dequeMut);
+        if(dataBatches.size() != 0) {
+            vector<string> currBatch {(vector<string> &&) dataBatches.front()};
+            dataBatches.pop_front();
+            lg.unlock();
+            wordsRedactor(currBatch);
+            for(int i = 0; i < currBatch.size(); i++) {
+                if(currBatch[i] != "") {
+                    ++countedWords[currBatch[i]];
+                }
+            }
+        } else {
+            if(done) {
+                break;
+            } else{
+                cv.wait(lg);
+            }
+        }
+    }
+    return 0;
 }
