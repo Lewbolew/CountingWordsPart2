@@ -14,8 +14,7 @@ int main() {
     atomic <bool> done = {false};
     int threadsNumber = 5;
 
-    thread producer = thread(producer, filename, blockSize, ref(dequeVectors), ref(mutexDeque),
-    ref(cv), ref(done));
+    thread producer = thread(producer, filename, blockSize, ref(dequeVectors), ref(mutexDeque), ref(cv), ref(done));
     thread consumers[threadsNumber];
 
     for(int i = 0; i < threadsNumber; i++) {

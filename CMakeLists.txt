@@ -3,6 +3,6 @@ project(CountingWordsPart2)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp mainFunctions.cpp)
+set(SOURCE_FILES main.cpp mainFunctions.cpp writerFunctions.cpp)
 add_executable(CountingWordsPart2 ${SOURCE_FILES})
 TARGET_LINK_LIBRARIES (CountingWordsPart2 pthread)

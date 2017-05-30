@@ -1,6 +1,8 @@
 //
 // Created by bohdan on 5/30/17.
 //
+#include <map>
+#include <vector>
 
 #ifndef COUNTINGWORDSPART2_WRITERFUNCTIONS_H
 #define COUNTINGWORDSPART2_WRITERFUNCTIONS_H
