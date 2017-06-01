@@ -8,18 +8,30 @@
 #include <iostream>
 #include <condition_variable>
 #include <algorithm>
+#include <sstream>
 #include "mainFunctions.h"
 
 using namespace std;
 
-void wordsRedactor(vector<string> &words) {
+vector<string> wordsRedactor(const vector<string> &words) {
+    vector<string> result;
+
     for (int k=0;k < words.size();k++) {
-        transform(words[k].begin(), words[k].end(), words[k].begin(), ::tolower);
-        words[k].erase (remove_if (words[k].begin (), words[k].end (), ::ispunct), words[k].end ());
+        string currLine = words[k];
+        std::istringstream iss(currLine);
+        while(iss) {
+            string currWord;
+            iss >> currWord;
+            transform(currWord.begin(), currWord.end(), currWord.begin(), ::tolower);
+            currWord.erase (remove_if (currWord.begin (), currWord.end (), ::ispunct), currWord.end ());
+            result.push_back(currWord);
+
+        }
     }
+    return result;
 }
-int producer(string filename, size_t block_size, deque<vector<string>> &dataBatches, mutex &dequeMut, condition_variable &cv, atomic <bool> &done) {
-    fstream file(filename); //full path to the file
+int producerFunc(string filename, size_t block_size, deque<vector<string>> &dataBatches, mutex &dequeMut, condition_variable &cv, atomic<bool> &done) {
+    fstream file(filename);
     if (!file.is_open()) {
         cout << "error reading from file";
         return  0;
@@ -30,7 +42,7 @@ int producer(string filename, size_t block_size, deque<vector<string>> &dataBatc
     int currentLine = 0;
     while(getline(file, line)) {
         oneBatch.push_back(line);
-        if(currentLine == BATCH_SIZE) {
+        if(currentLine == block_size) {
             {
                 lock_guard<mutex> lg(dequeMut);
                 dataBatches.push_back(oneBatch);
@@ -54,7 +66,7 @@ int producer(string filename, size_t block_size, deque<vector<string>> &dataBatc
     return 1;
 }
 
-int consumer(map<string, int> &countedWords, deque<vector<string>> &dataBatches, mutex &dequeMut,mutex &mapMut, condition_variable &cv, atomic <bool> &done) {
+int consumerFunc(map<string, int> &countedWords, deque<vector<string>> &dataBatches, mutex &dequeMut,mutex &mapMut, condition_variable &cv, atomic <bool> &done) {
     bool checker = true;
     while(checker) {
         unique_lock<mutex> lg(dequeMut);
@@ -62,9 +74,9 @@ int consumer(map<string, int> &countedWords, deque<vector<string>> &dataBatches,
             vector<string> currBatch {(vector<string> &&) dataBatches.front()};
             dataBatches.pop_front();
             lg.unlock();
-            wordsRedactor(currBatch);
-            for(int i = 0; i < currBatch.size(); i++) {
-                if(currBatch[i] != "") {
+            vector<string> splittedWords = wordsRedactor(currBatch);
+            for(int i = 0; i < splittedWords.size(); i++) {
+                if(splittedWords[i] != "") {
                     ++countedWords[currBatch[i]];
                 }
             }

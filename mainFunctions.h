@@ -12,11 +12,13 @@
 #define COUNTINGWORDSPART2_MAINFUNCTIONS_H
 #define BATCH_SIZE 50
 
-int producer(std::string filename, size_t block_size, std::deque<std::vector<std::string>> &dataBatches,
+int producerFunc(std::string filename, size_t block_size, std::deque<std::vector<std::string>> &dataBatches,
              std::mutex &dequeMut, std::condition_variable &cv, std::atomic <bool> &done);
 
-int consumer(std::map<std::string, int> &countedWords, std::deque<std::vector<std::string>> &dataBatches,
+int consumerFunc(std::map<std::string, int> &countedWords, std::deque<std::vector<std::string>> &dataBatches,
              std::mutex &dequeMut,std::mutex &mapMut, std::condition_variable &cv, std::atomic <bool> &done);
+
+std::vector<std::string> wordsRedactor(const std::vector<std::string> &words);
 
 
 #endif //COUNTINGWORDSPART2_MAINFUNCTIONS_H
