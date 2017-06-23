@@ -118,7 +118,7 @@ void mapMerger(deque<map<string, int>> &dequeMaps, mutex &mergeMaps, const int& 
             ++currThreadNum;
             lk.unlock();
         } else {
-            if(currThreadNum == threadsNum ) {
+            if(currThreadNum == threadsNum - 1 ) {
                 break;
             } else {
                 cv.wait(lk);
