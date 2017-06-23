@@ -11,7 +11,7 @@ bool compareFunc(const vector<string>& v1, const vector<string>& v2)
     return stoi(v1[1]) > stoi(v2[1]);
 }
 
-vector<vector<string>> mapToVector(map<string, int> m1)
+vector<vector<string>> mapToVector(const map<string, int> &m1)
 {
     vector<vector<string>> v;
     for(auto mapIterator = m1.begin();
@@ -26,7 +26,7 @@ vector<vector<string>> mapToVector(map<string, int> m1)
     return  v;
 }
 
-void writeByAlphabet(map<string,int> m, string filepath) {
+void writeByAlphabet(const map<string,int> &m, const string &filepath) {
     ofstream fileWithSortedAlph;
 
     fileWithSortedAlph.open(filepath);
@@ -40,7 +40,7 @@ void writeByAlphabet(map<string,int> m, string filepath) {
     fileWithSortedAlph.close();
 }
 
-void writeByNumber(map<string, int> m, string filepath) {
+void writeByNumber(const map<string, int> &m, const string &filepath) {
     ofstream fileWithSortedNumb;
 
     fileWithSortedNumb.open(filepath);

@@ -4,24 +4,33 @@
 #include <iterator>
 #include <sstream>
 #include "mainFunctions.h"
+#include "configReader.h"
+#include "writerFunctions.h"
 using namespace std;
 
-
-int main() {
+int main(int argc, char *argv[]) {
+    //_______________configReading____________________________________
+    vector<string> arguments = configurationReader(argv[1]);
+    string nameOutputFileAlphabet = betweenQuotes(arguments[1]);
+    string nameOupputFileNumber = betweenQuotes(arguments[2]);
+    int threadsNumber = intParser(arguments[3]);
+    //________________________________________________________________
     deque<vector<string>> dequeVectors;
+    deque<map<string, int>> dequeMaps;
     map<string, int> wordsCountMap;
-    string filename = "example";
+    int currThreadNum = 0;
+    string filename = betweenQuotes(arguments[0]);
     int blockSize = 2;
     condition_variable cv;
     mutex mutexDeque;
-    atomic <bool> done = {false};
     mutex mutexMap;
-    int threadsNumber = 2;
+    mutex mergeMaps;
+    atomic <bool> done = {false};
     thread producer = thread(producerFunc, filename, blockSize, ref(dequeVectors), ref(mutexDeque), ref(cv), ref(done));
     thread consumers[threadsNumber];
     for(int i = 0; i < threadsNumber; i++) {
-        consumers[i] = thread(consumerFunc, ref(wordsCountMap), ref(dequeVectors), ref(mutexDeque),
-                              ref(mutexMap), ref(cv), ref(done));
+        consumers[i] = thread(consumerFunc, ref(dequeMaps), ref(dequeVectors), ref(mutexDeque),
+                              ref(mutexMap), ref(mergeMaps),ref(cv), ref(done));
     }
 
 
@@ -29,11 +38,22 @@ int main() {
         consumers[j].join();
     }
     producer.join();
-
-    for (const auto &p : wordsCountMap) {
+    thread mergers[threadsNumber];
+    for(int k = 0; k < threadsNumber; k++) {
+        mergers[k] = thread(mapMerger, ref(dequeMaps), ref(mergeMaps),
+        ref(threadsNumber), ref(cv), ref(currThreadNum));
+    }
+    for(int n = 0; n < threadsNumber; n++) {
+        mergers[n].join();
+    }
+    for (const auto &p : dequeMaps[0]) {
         std::cout <<p.first << ": " << p.second << '\n';
     }
 
+
+    // WRITES RESULTS INTO A FILES
+    writeByAlphabet(dequeMaps[0], nameOutputFileAlphabet);
+    writeByNumber(dequeMaps[0], nameOupputFileNumber);
     return 0;
 
 }

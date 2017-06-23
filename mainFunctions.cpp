@@ -30,6 +30,7 @@ vector<string> wordsRedactor(const vector<string> &words) {
     }
     return result;
 }
+
 int producerFunc(string filename, size_t block_size, deque<vector<string>> &dataBatches, mutex &dequeMut, condition_variable &cv, atomic<bool> &done) {
     fstream file(filename);
     if (!file.is_open()) {
@@ -66,18 +67,19 @@ int producerFunc(string filename, size_t block_size, deque<vector<string>> &data
     return 1;
 }
 
-int consumerFunc(map<string, int> &countedWords, deque<vector<string>> &dataBatches, mutex &dequeMut,mutex &mapMut, condition_variable &cv, atomic <bool> &done) {
+int consumerFunc(deque<map<string, int>> &dequeMaps, deque<vector<string>> &dataBatches, mutex &dequeMut,mutex &mapMut, mutex &mergeMaps, condition_variable &cv, atomic <bool> &done) {
     bool checker = true;
+    map<string, int> currentMap;
     while(checker) {
         unique_lock<mutex> lg(dequeMut);
         if(dataBatches.size() != 0) {
             vector<string> currBatch {(vector<string> &&) dataBatches.front()};
             dataBatches.pop_front();
             lg.unlock();
-            vector<string> splittedWords = wordsRedactor(currBatch);
-            for(int i = 0; i < splittedWords.size(); i++) {
-                if(splittedWords[i] != "") {
-                    ++countedWords[currBatch[i]];
+            vector<string> splitedWords = wordsRedactor(currBatch);
+            for(int i = 0; i < splitedWords.size(); i++) {
+                if(splitedWords[i] != "") {
+                        ++currentMap[splitedWords[i]];
                 }
             }
         } else {
@@ -88,5 +90,40 @@ int consumerFunc(map<string, int> &countedWords, deque<vector<string>> &dataBatc
             }
         }
     }
+
+    {
+        lock_guard<mutex> lg(mergeMaps);
+        dequeMaps.push_back(currentMap);
+    }
     return 0;
+}
+
+
+void mapMerger(deque<map<string, int>> &dequeMaps, mutex &mergeMaps, const int& threadsNum, condition_variable &cv, int &currThreadNum) {
+    while(true) {
+        unique_lock<mutex> lk(mergeMaps);
+        if(dequeMaps.size() > 1) {
+            map<string, int> map1{move(dequeMaps.front())};
+            dequeMaps.pop_front();
+            map<string, int> map2{move(dequeMaps.front())};
+            dequeMaps.pop_front();
+            lk.unlock();
+
+            for(auto wordsCountIterator = map2.begin(); wordsCountIterator != map2.end();
+                    wordsCountIterator++) {
+                ++map1[wordsCountIterator->first];
+            }
+            lk.lock();
+            dequeMaps.push_back(map1);
+            ++currThreadNum;
+            lk.unlock();
+        } else {
+            if(currThreadNum == threadsNum ) {
+                break;
+            } else {
+                cv.wait(lk);
+            }
+
+        }
+    }
 }
